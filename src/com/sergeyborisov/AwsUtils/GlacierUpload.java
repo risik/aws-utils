@@ -22,10 +22,12 @@ public class GlacierUpload {
                     "Based on AWS's sample for Glacier Upload:\n" +
                     "http://docs.amazonwebservices.com/amazonglacier/latest/dev/getting-started-upload-archive-java.html\n\n" +
                     "Usage:\n" +
-                    "\tjava -jar GlacierUpload.jar <parameters> filenames\n" +
+                    "\tjava -jar GlacierUpload.jar command <parameters> filenames\n" +
+                    "\tcommand:\n" +
+                    "\t\tupload - once supported for now\n" +
                     "\tparameters:\n" +
                     "\t\t--vault=vaultname\n" +
-                    "\t\t--region=regionname ('us-east-1' by default)\n"
+                    "\t\t--region=regionname. Optional. Default value: 'us-east-1'\n"
             ;
 
     public static void main(String[] args) throws IOException {
@@ -97,28 +99,45 @@ public class GlacierUpload {
     }
 
     private boolean parseCommandLine(String[] args) {
-        for(String arg: args) {
-            parseArg(arg);
+        if (args.length < 2)
+            return false;
+
+        if (!parseMainCommand(args[0]))
+            return false;
+
+        String []paramsAndFiles = new String[args.length-1];
+        System.arraycopy(args, 1, paramsAndFiles, 0, args.length-1);
+
+        return parseParamsAndFiles(paramsAndFiles);
+    }
+
+    private boolean parseMainCommand(String arg) {
+        return "upload".equals(arg);
+    }
+
+    private boolean parseParamsAndFiles(String[] paramsAndFiles) {
+        for(String arg:paramsAndFiles) {
+            if (arg.startsWith("--")) {
+                parseAndApplyParam(arg);
+            }
+            else {
+                _filenames.add(arg);
+            }
         }
         return (_vaultName != null) && (_filenames.size() > 0);
     }
 
-    private void parseArg(String arg) {
-        if (arg.startsWith("--")) {
-            String []pair = parseParam(arg);
-            if (pair == null)
-                return;
+    private void parseAndApplyParam(String arg) {
+        String []pair = parseParam(arg);
+        if (pair == null)
+            return;
 
-            String paramName = pair[0];
-            String paramValue = pair[1];
-            if ("--vault".equals(paramName))
-                _vaultName = paramValue;
-            else if ("--region".equals(paramName))
-                _region = paramValue;
-        }
-        else {
-            _filenames.add(arg);
-        }
+        String paramName = pair[0];
+        String paramValue = pair[1];
+        if ("--vault".equals(paramName))
+            _vaultName = paramValue;
+        else if ("--region".equals(paramName))
+            _region = paramValue;
     }
 
     private String[] parseParam(String arg) {
